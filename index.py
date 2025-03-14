@@ -1,31 +1,77 @@
+from email.policy import default
+from logging import PlaceHolder
 import tkinter as tk
+from turtle import width
 from api_call import optimize_code
-from matplotlib.offsetbox import TextArea
-from scipy import optimize 
+from pygments.lexers import guess_lexer    
+from tkinter import ttk
+from tkcode import CodeEditor
 
-
-def callOptimise(code_snippet):
-    if(len(code_snippet) == 0):
+class AICodeOptimizer:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.geometry("1400x900")
+        self.language = ""
+        self.root.columnconfigure(0, weight=1)  
+        self.root.columnconfigure(1, weight=1)  
+        self.root.columnconfigure(2, weight=1)  
+        self.root.rowconfigure(10, weight=1)
         
-    response = optimize_code(code_snippet)
-    codeTextArea1.insert("1.0",response['code'])
-    print(response)
+        
+        self.labelMain = tk.Label(self.root, text="Welcome to the AI Code Optimiser", font=("Arial", 16, "bold"))
+        self.labelMain.grid(row=0, column=1, pady=10, sticky="n")  
 
-root = tk.Tk()
-root.geometry("700x700")
-
-labelMain = tk.Label(root , text = "Welcome to the AI code optimiser")
-labelMain.pack()
-
-codeTextArea = tk.Text(root)
-codeTextArea.pack()
-
-buttonOptimise = tk.Button(root,text = "Optimise code" , command = lambda:callOptimise(codeTextArea.get("1.0", tk.END)))
-buttonOptimise.pack()
-
-codeTextArea1 = tk.Text(root)
-codeTextArea1.pack()
+        self.languageLabel = tk.Label(self.root, text="Language: ", font=("Arial", 16, "bold"))
+        self.languageLabel.grid(row=0, column=2, pady=10, sticky="n")
 
 
+        self.code_editor = CodeEditor(self.root, language={self.language}, width = 50)
+        self.code_editor.grid(row=1, column=0, pady=10, sticky="nsew")
+        self.code_editor.bind("<<Modified>>",self.detectLanguage)
+        self.code_editor.bind("<KeyPress>",self.detectLanguage)
+        self.code_editor.bind("<KeyRelease>",self.detectLanguage)
 
-root.mainloop()
+        self.code_editor1 = CodeEditor(self.root, language={self.language}, width = 50)
+        self.code_editor1.grid(row=1, column=2, pady=10, sticky="nsew")
+
+        self.buttonOptimise = tk.Button(self.root, text="Optimise Code", command=lambda: self.callOptimise(self.code_editor.get("1.0", tk.END)))
+        self.buttonOptimise.grid(row=2, column=1, pady=10)  
+
+        self.optimisationLabel = ttk.Label(self.root, text="Optimisation parameter : ", font=("Arial", 16, "bold"))
+        self.optimisationLabel.grid(row=3, column=1, pady=10, sticky="n")
+
+        self.optimisationCombo = ttk.Combobox(self.root, font=("Arial", 16, "bold") , values = ["All","Speed" , "Memory" , "Readability"])
+        self.optimisationCombo.grid(row=4, column=1, pady=10, sticky="n")  
+        self.optimisationCombo.current(0)
+
+        self.detectorLabel = tk.Label(self.root, text="", font=("Arial", 12))
+        self.detectorLabel.grid(row=5, column=1, pady=10, sticky="n")  
+
+
+        # self.aiTextLabel = tk.Label(self.root, text="")
+        # self.aiTextLabel.grid(row=5, column=1, pady=10, rowspan=3)
+
+    def detectLanguage(self,event):
+        print('Triggererd')
+        code = self.code_editor.get("1.0", "end-1c")
+        lexer = guess_lexer(code)
+        self.language = lexer.name
+        self.languageLabel.config(text = "Language : "+self.language)    
+        
+    def callOptimise(self, code_snippet):
+        if(len(code_snippet) == 1 or code_snippet == "The code cannot be empty"):
+            # self.aiTextLabel.config(text="The code cannot be empty")
+            return
+        response = optimize_code(code_snippet,self.optimisationCombo.get())
+        self.code_editor1.delete("1.0", tk.END)  # Clear previous content
+        self.code_editor1.insert("1.0", response['code'])  # Insert new content
+
+        # self.aiTextLabel.config(text=response['text'])
+        
+    def run(self):
+        self.root.mainloop()
+
+if __name__ == "__main__":
+    app = AICodeOptimizer()
+    app.run()
+    app.detectLanguage()

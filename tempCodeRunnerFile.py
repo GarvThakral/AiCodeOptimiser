@@ -1,0 +1,1 @@
+        # self.aiTextLabel.config(text=response['text'])
