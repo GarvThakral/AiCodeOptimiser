@@ -49,8 +49,9 @@ class AICodeOptimizer:
         self.root.title("AI Code Optimizer")
         self.root.geometry("1400x900")
         self.root.configure(bg="#f0f2f5")
-        
-        self.colors = {
+       
+        # Define both light and dark theme colors
+        self.light_colors = {
             "primary": "#3498db",
             "primary_dark": "#2980b9",
             "secondary": "#2ecc71",
@@ -62,52 +63,92 @@ class AICodeOptimizer:
             "bg": "#f0f2f5",
             "editor_bg": "#272822"
         }
-        
+       
+        self.dark_colors = {
+            "primary": "#2980b9",
+            "primary_dark": "#1f618d",
+            "secondary": "#27ae60",
+            "secondary_dark": "#1e8449",
+            "dark": "#ecf0f1",  # Text color (light in dark mode)
+            "light": "#2c3e50",  # Background elements
+            "danger": "#c0392b",
+            "warning": "#d35400",
+            "bg": "#1a1a1a",     # Main background
+            "editor_bg": "#272822"  # Darker editor background
+        }
+       
+        # Default to light theme
+        self.is_dark_mode = False
+        self.colors = self.light_colors
+       
         self.style = ttk.Style()
         self.style.theme_use('clam')
-        
-        self.style.configure("TNotebook", background=self.colors["bg"], borderwidth=0)
-        self.style.configure("TNotebook.Tab", background=self.colors["light"], foreground=self.colors["dark"], 
-                             padding=[15, 5], font=('Arial', 11))
-        self.style.map("TNotebook.Tab", background=[("selected", self.colors["primary"])], 
-                       foreground=[("selected", self.colors["light"])])
-        
-        self.style.configure("TFrame", background=self.colors["bg"])
-        
-        self.style.configure("Primary.TButton", background=self.colors["primary"], foreground="white", 
-                             font=('Arial', 11, 'bold'), padding=10)
-        self.style.configure("Danger.TButton", background=self.colors["danger"], foreground="white", 
-                             font=('Arial', 11), padding=5)
-        self.style.configure("Secondary.TButton", background=self.colors["secondary"], foreground="white", 
-                             font=('Arial', 11), padding=5)
-        
-        self.style.configure("TLabel", background=self.colors["bg"], foreground=self.colors["dark"], 
-                             font=('Arial', 11))
-        self.style.configure("Header.TLabel", background=self.colors["bg"], foreground=self.colors["primary"], 
-                             font=('Arial', 16, 'bold'))
-        
-        self.style.configure("TCombobox", background=self.colors["light"], 
-                             fieldbackground=self.colors["light"], foreground=self.colors["dark"])
-        
+       
+        self.apply_theme()
+       
         self.con = sqlite3.connect("tutorial.db")
         self.cur = self.con.cursor()
         self.language = "Python"
 
         self.create_layout()
-        
-    def create_layout(self):
+   
+    def apply_theme(self):
+        """Apply the current theme colors to all UI elements"""
+        self.root.configure(bg=self.colors["bg"])
+       
+        self.style.configure("TNotebook", background=self.colors["bg"], borderwidth=0)
+        self.style.configure("TNotebook.Tab", background=self.colors["light"], foreground=self.colors["dark"],
+                             padding=[15, 5], font=('Arial', 11))
+        self.style.map("TNotebook.Tab", background=[("selected", self.colors["primary"])],
+                       foreground=[("selected", self.colors["light"])])
+       
+        self.style.configure("TFrame", background=self.colors["bg"])
+       
+        self.style.configure("Primary.TButton", background=self.colors["primary"], foreground="white",
+                             font=('Arial', 11, 'bold'), padding=10)
+        self.style.configure("Danger.TButton", background=self.colors["danger"], foreground="white",
+                             font=('Arial', 11), padding=5)
+        self.style.configure("Secondary.TButton", background=self.colors["secondary"], foreground="white",
+                             font=('Arial', 11), padding=5)
+       
+        self.style.configure("TLabel", background=self.colors["bg"], foreground=self.colors["dark"],
+                             font=('Arial', 11))
+        self.style.configure("Header.TLabel", background=self.colors["bg"], foreground=self.colors["primary"],
+                             font=('Arial', 16, 'bold'))
+       
+        self.style.configure("TCombobox", background=self.colors["light"],
+                             fieldbackground=self.colors["light"], foreground=self.colors["dark"])
+       
+        # Theme switch styles
+        self.style.configure("Switch.TLabel", background=self.colors["bg"], foreground=self.colors["dark"],
+                             font=('Arial', 10))
+        self.style.configure("Switch.TCheckbutton", background=self.colors["bg"])
+       
+        # Update editors if they exist
+        if hasattr(self, 'code_editor'):
+            self.code_editor.configure(background=self.colors["editor_bg"])
+            self.code_editor1.configure(background=self.colors["editor_bg"])
+   
+    def toggle_theme(self):
+        """Toggle between light and dark themes"""
+        self.is_dark_mode = not self.is_dark_mode
+        self.colors = self.dark_colors if self.is_dark_mode else self.light_colors
+        self.apply_theme()
+        theme_text = "Dark Mode" if self.is_dark_mode else "Light Mode"
+        self.theme_label.configure(text=theme_text)
 
+    def create_layout(self):
         self.tabControl = ttk.Notebook(self.root)
         self.tab1 = ttk.Frame(self.tabControl)
         self.tab2 = ttk.Frame(self.tabControl)
-        
+    
         menubar = tk.Menu(self.tabControl)
         menubar.configure(bg=self.colors["editor_bg"], fg=self.colors["editor_bg"])
-        file = Menu(menubar, tearoff = 0) 
-        menubar.add_cascade(label ='File', menu = file) 
-        file.add_command(label ='import file', command = self.handleFileUpload) 
-        file.add_command(label ='save optimised', command = self.handleFileSave) 
-        file.add_separator() 
+        file = Menu(menubar, tearoff = 0)
+        menubar.add_cascade(label ='File', menu = file)
+        file.add_command(label ='import file', command = self.handleFileUpload)
+        file.add_command(label ='save optimised', command = self.handleFileSave)
+        file.add_separator()
 
         self.root.config(menu = menubar)
 
@@ -115,25 +156,36 @@ class AICodeOptimizer:
         self.tabControl.add(self.tab2, text='History')
         self.tabControl.bind("<<NotebookTabChanged>>", self.on_tab_changed)
         self.tabControl.pack(expand=1, fill="both", padx=10, pady=10)
-        
+    
         for i in range(3):
             self.tab1.columnconfigure(i, weight=1)
         self.tab1.rowconfigure(1, weight=1)
 
         header_frame = ttk.Frame(self.tab1)
         header_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=10, pady=10)
-        
+    
         self.labelMain = ttk.Label(header_frame, text="AI Code Optimizer", style="Header.TLabel")
         self.labelMain.pack(side="left", padx=10)
-        
+    
+        # Create theme toggle switch
+        theme_frame = ttk.Frame(header_frame)
+        theme_frame.pack(side="right", padx=10)
+    
+        self.theme_label = ttk.Label(theme_frame, text="☀️ Light Mode", style="Switch.TLabel")
+        self.theme_label.pack(side="left", padx=(0, 5))
+    
+        self.theme_switch = ttk.Checkbutton(theme_frame, style="Switch.TCheckbutton",
+                                        command=self.toggle_theme)
+        self.theme_switch.pack(side="left")
+    
         self.languageLabel = ttk.Label(header_frame, text="Language: Python", style="TLabel")
-        self.languageLabel.pack(side="right", padx=10)
+        self.languageLabel.pack(side="right", padx=20)
 
         editors_frame = ttk.Frame(self.tab1)
         editors_frame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=10, pady=5)
         editors_frame.columnconfigure(0, weight=1)
         editors_frame.columnconfigure(2, weight=1)
-        
+    
         editors_frame.columnconfigure(0, weight=1)
         editors_frame.columnconfigure(2, weight=1)
         editors_frame.rowconfigure(0, weight=1)
@@ -142,51 +194,144 @@ class AICodeOptimizer:
         left_frame.grid(row=0, column=0, sticky="nsew", padx=5)
         left_frame.rowconfigure(1, weight=1)
         left_frame.columnconfigure(0, weight=1)
-        
+    
         ttk.Label(left_frame, text="Original Code", style="TLabel").grid(row=0, column=0, sticky="w", pady=(0, 5))
-        self.code_editor = CodeEditor(left_frame, language=self.language, width=50, height=30, 
-                                      background=self.colors["editor_bg"], font=('Consolas', 11) )
+        self.code_editor = CodeEditor(left_frame, language=self.language, width=50, height=30,
+                                    background=self.colors["editor_bg"], font=('Consolas', 11) )
         self.code_editor.grid(row=1, column=0, sticky="nsew")
         self.code_editor.bind("<<Modified>>", self.detectLanguage)
         self.code_editor.bind("<KeyPress>", self.detectLanguage)
         self.code_editor.bind("<KeyRelease>", self.detectLanguage)
-        
+    
         middle_frame = ttk.Frame(editors_frame)
         middle_frame.grid(row=0, column=1, sticky="ns", padx=10)
-        
+    
         ttk.Label(middle_frame, text="Optimization Target", style="TLabel").pack(pady=(20, 5))
-        self.optimisationCombo = ttk.Combobox(middle_frame, values=["All", "Speed", "Memory", "Readability"], 
-                                              width=15, state="readonly")
+        self.optimisationCombo = ttk.Combobox(middle_frame, values=["All", "Speed", "Memory", "Readability"],
+                                            width=15, state="readonly")
         self.optimisationCombo.pack(pady=5)
         self.optimisationCombo.current(0)
-        
-        self.buttonOptimise = ttk.Button(middle_frame, text="Optimize Code ➡", style="Primary.TButton", 
+    
+        self.buttonOptimise = ttk.Button(middle_frame, text="Optimize Code ➡", style="Primary.TButton",
                                         command=lambda: self.callOptimise(self.code_editor.get("1.0", tk.END)))
         self.buttonOptimise.pack(pady=20)
-        
+    
         self.detectorLabel = ttk.Label(middle_frame, text="", style="TLabel")
         self.detectorLabel.pack(pady=10)
-        
+    
         right_frame = ttk.Frame(editors_frame)
         right_frame.grid(row=0, column=2, sticky="nsew", padx=5)
         right_frame.rowconfigure(1, weight=1)
         right_frame.columnconfigure(0, weight=1)
-        
+    
         ttk.Label(right_frame, text="Optimized Code", style="TLabel").grid(row=0, column=0, sticky="w", pady=(0, 5))
-        self.code_editor1 = CodeEditor(right_frame, language=self.language, width=50, height=30, 
-                                       background=self.colors["editor_bg"], font=('Consolas', 11))
+        self.code_editor1 = CodeEditor(right_frame, language=self.language, width=50, height=30,
+                                    background=self.colors["editor_bg"], font=('Consolas', 11))
         self.code_editor1.grid(row=1, column=0, sticky="nsew")
-        
+    
         status_bar = ttk.Frame(self.tab1)
         status_bar.grid(row=2, column=0, columnspan=3, sticky="ew", padx=10, pady=5)
         status_text = ttk.Label(status_bar, text="Ready", style="TLabel")
         status_text.pack(side="left")
-        
+    
         self.tab2.columnconfigure(0, weight=1)
         self.tab2.rowconfigure(0, weight=1)
-        
+    
         self.history_container = ttk.Frame(self.tab2)
         self.history_container.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+
+    # def create_layout(self):
+
+    #     self.tabControl = ttk.Notebook(self.root)
+    #     self.tab1 = ttk.Frame(self.tabControl)
+    #     self.tab2 = ttk.Frame(self.tabControl)
+        
+    #     menubar = tk.Menu(self.tabControl)
+    #     menubar.configure(bg=self.colors["editor_bg"], fg=self.colors["editor_bg"])
+    #     file = Menu(menubar, tearoff = 0) 
+    #     menubar.add_cascade(label ='File', menu = file) 
+    #     file.add_command(label ='import file', command = self.handleFileUpload) 
+    #     file.add_command(label ='save optimised', command = self.handleFileSave) 
+    #     file.add_separator() 
+
+    #     self.root.config(menu = menubar)
+
+    #     self.tabControl.add(self.tab1, text='Optimize Code')
+    #     self.tabControl.add(self.tab2, text='History')
+    #     self.tabControl.bind("<<NotebookTabChanged>>", self.on_tab_changed)
+    #     self.tabControl.pack(expand=1, fill="both", padx=10, pady=10)
+        
+    #     for i in range(3):
+    #         self.tab1.columnconfigure(i, weight=1)
+    #     self.tab1.rowconfigure(1, weight=1)
+
+    #     header_frame = ttk.Frame(self.tab1)
+    #     header_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=10, pady=10)
+        
+    #     self.labelMain = ttk.Label(header_frame, text="AI Code Optimizer", style="Header.TLabel")
+    #     self.labelMain.pack(side="left", padx=10)
+        
+    #     self.languageLabel = ttk.Label(header_frame, text="Language: Python", style="TLabel")
+    #     self.languageLabel.pack(side="right", padx=10)
+
+    #     editors_frame = ttk.Frame(self.tab1)
+    #     editors_frame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=10, pady=5)
+    #     editors_frame.columnconfigure(0, weight=1)
+    #     editors_frame.columnconfigure(2, weight=1)
+        
+    #     editors_frame.columnconfigure(0, weight=1)
+    #     editors_frame.columnconfigure(2, weight=1)
+    #     editors_frame.rowconfigure(0, weight=1)
+
+    #     left_frame = ttk.Frame(editors_frame)
+    #     left_frame.grid(row=0, column=0, sticky="nsew", padx=5)
+    #     left_frame.rowconfigure(1, weight=1)
+    #     left_frame.columnconfigure(0, weight=1)
+        
+    #     ttk.Label(left_frame, text="Original Code", style="TLabel").grid(row=0, column=0, sticky="w", pady=(0, 5))
+    #     self.code_editor = CodeEditor(left_frame, language=self.language, width=50, height=30, 
+    #                                   background=self.colors["editor_bg"], font=('Consolas', 11) )
+    #     self.code_editor.grid(row=1, column=0, sticky="nsew")
+    #     self.code_editor.bind("<<Modified>>", self.detectLanguage)
+    #     self.code_editor.bind("<KeyPress>", self.detectLanguage)
+    #     self.code_editor.bind("<KeyRelease>", self.detectLanguage)
+        
+    #     middle_frame = ttk.Frame(editors_frame)
+    #     middle_frame.grid(row=0, column=1, sticky="ns", padx=10)
+        
+    #     ttk.Label(middle_frame, text="Optimization Target", style="TLabel").pack(pady=(20, 5))
+    #     self.optimisationCombo = ttk.Combobox(middle_frame, values=["All", "Speed", "Memory", "Readability"], 
+    #                                           width=15, state="readonly")
+    #     self.optimisationCombo.pack(pady=5)
+    #     self.optimisationCombo.current(0)
+        
+    #     self.buttonOptimise = ttk.Button(middle_frame, text="Optimize Code ➡", style="Primary.TButton", 
+    #                                     command=lambda: self.callOptimise(self.code_editor.get("1.0", tk.END)))
+    #     self.buttonOptimise.pack(pady=20)
+        
+    #     self.detectorLabel = ttk.Label(middle_frame, text="", style="TLabel")
+    #     self.detectorLabel.pack(pady=10)
+        
+    #     right_frame = ttk.Frame(editors_frame)
+    #     right_frame.grid(row=0, column=2, sticky="nsew", padx=5)
+    #     right_frame.rowconfigure(1, weight=1)
+    #     right_frame.columnconfigure(0, weight=1)
+        
+    #     ttk.Label(right_frame, text="Optimized Code", style="TLabel").grid(row=0, column=0, sticky="w", pady=(0, 5))
+    #     self.code_editor1 = CodeEditor(right_frame, language=self.language, width=50, height=30, 
+    #                                    background=self.colors["editor_bg"], font=('Consolas', 11))
+    #     self.code_editor1.grid(row=1, column=0, sticky="nsew")
+        
+    #     status_bar = ttk.Frame(self.tab1)
+    #     status_bar.grid(row=2, column=0, columnspan=3, sticky="ew", padx=10, pady=5)
+    #     status_text = ttk.Label(status_bar, text="Ready", style="TLabel")
+    #     status_text.pack(side="left")
+        
+    #     self.tab2.columnconfigure(0, weight=1)
+    #     self.tab2.rowconfigure(0, weight=1)
+        
+    #     self.history_container = ttk.Frame(self.tab2)
+    #     self.history_container.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         
     def handleFileSave(self):
         if(len(self.code_editor1.get("1.0",tk.END)) == 1):
@@ -196,7 +341,6 @@ class AICodeOptimizer:
             text2save=str(self.code_editor1.get(0.0,tk.END))
             name.write(text2save)
             name.close
-
 
     def handleFileUpload(self):
         self.file_path = filedialog.askopenfilename()
@@ -219,11 +363,10 @@ class AICodeOptimizer:
         tab_text = event.widget.tab(selected_tab, "text")
         
         if tab_text == "History":
-            # Clear previous content
+
             for widget in self.history_container.winfo_children():
                 widget.destroy()
             
-            # Create scrollable frame for history items
             history_canvas = tk.Canvas(self.history_container, bg=self.colors["bg"])
             scrollbar = ttk.Scrollbar(self.history_container, orient="vertical", command=history_canvas.yview)
             scrollable_frame = ttk.Frame(history_canvas)
@@ -249,16 +392,13 @@ class AICodeOptimizer:
             if not self.history:
                 ttk.Label(scrollable_frame, text="No history records found.", style="TLabel").pack(pady=20)
             else:
-                # Create history items
                 for index, item in enumerate(self.history):
                     history_item = ttk.Frame(scrollable_frame)
                     history_item.pack(fill="x", padx=10, pady=5)
                     
-                    # Item number and code preview
                     preview_text = item[1].strip()[:40] + "..." if len(item[1]) > 40 else item[1].strip()
                     ttk.Label(history_item, text=f"{index+1}. {preview_text}", style="TLabel").pack(side="left", padx=5)
-                    
-                    # Buttons
+
                     buttons_frame = ttk.Frame(history_item)
                     buttons_frame.pack(side="right")
                     
@@ -267,8 +407,7 @@ class AICodeOptimizer:
                     
                     ttk.Button(buttons_frame, text="Delete", style="Danger.TButton", 
                               command=lambda pk=item[0]: self.deleteQuery(pk)).pack(side="left", padx=5)
-                    
-                    # Separator
+
                     ttk.Separator(scrollable_frame, orient="horizontal").pack(fill="x", padx=10, pady=5)
     
     def review_history_item(self, item):
@@ -329,8 +468,12 @@ class AICodeOptimizer:
         # Update status
         self.detectorLabel.config(text="Optimization complete!")
         
+    
     def run(self):
         self.root.mainloop()
+
+
+
 
 if __name__ == "__main__":
     app = AICodeOptimizer()
