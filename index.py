@@ -1,10 +1,11 @@
 import tkinter as tk
-from tkinter import ttk, font
+from tkinter import Menu, ttk, font
 from tkcode import CodeEditor
 import sqlite3
 from pygments.lexers import guess_lexer
 from api_call import optimize_code
-
+from tkinter import filedialog
+from tkinter.filedialog import asksaveasfile
 LANGUAGE_MAP = {
     "Python": "python",
     "C++": "cpp",
@@ -100,6 +101,16 @@ class AICodeOptimizer:
         self.tab1 = ttk.Frame(self.tabControl)
         self.tab2 = ttk.Frame(self.tabControl)
         
+        menubar = tk.Menu(self.tabControl)
+        menubar.configure(bg=self.colors["editor_bg"], fg=self.colors["editor_bg"])
+        file = Menu(menubar, tearoff = 0) 
+        menubar.add_cascade(label ='File', menu = file) 
+        file.add_command(label ='import file', command = self.handleFileUpload) 
+        file.add_command(label ='save optimised', command = self.handleFileSave) 
+        file.add_separator() 
+
+        self.root.config(menu = menubar)
+
         self.tabControl.add(self.tab1, text='Optimize Code')
         self.tabControl.add(self.tab2, text='History')
         self.tabControl.bind("<<NotebookTabChanged>>", self.on_tab_changed)
@@ -134,7 +145,7 @@ class AICodeOptimizer:
         
         ttk.Label(left_frame, text="Original Code", style="TLabel").grid(row=0, column=0, sticky="w", pady=(0, 5))
         self.code_editor = CodeEditor(left_frame, language=self.language, width=50, height=30, 
-                                      background=self.colors["editor_bg"], font=('Consolas', 11))
+                                      background=self.colors["editor_bg"], font=('Consolas', 11) )
         self.code_editor.grid(row=1, column=0, sticky="nsew")
         self.code_editor.bind("<<Modified>>", self.detectLanguage)
         self.code_editor.bind("<KeyPress>", self.detectLanguage)
@@ -177,7 +188,32 @@ class AICodeOptimizer:
         self.history_container = ttk.Frame(self.tab2)
         self.history_container.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         
-        
+    def handleFileSave(self):
+        if(len(self.code_editor1.get("1.0",tk.END)) == 1):
+            self.detectorLabel.config(text="Cannot save empty file.")
+        else:
+            name=asksaveasfile(mode='w',defaultextension=".txt")
+            text2save=str(self.code_editor1.get(0.0,tk.END))
+            name.write(text2save)
+            name.close
+
+
+    def handleFileUpload(self):
+        self.file_path = filedialog.askopenfilename()
+        if self.file_path:
+            self.process_file()
+
+    def process_file(self):
+        try:
+            print(self.file_path)
+            with open(self.file_path, 'r') as file:
+                file_contents = file.read()
+                print(file_contents)
+                self.code_editor.delete('1.0', tk.END)
+                self.code_editor.insert(tk.END, file_contents)
+        except Exception as e:
+            print(str(e))
+
     def on_tab_changed(self, event):
         selected_tab = event.widget.select()
         tab_text = event.widget.tab(selected_tab, "text")
@@ -203,11 +239,9 @@ class AICodeOptimizer:
             history_canvas.pack(side="left", fill="both", expand=True)
             scrollbar.pack(side="right", fill="y")
             
-            # Get history items
             self.cur.execute("SELECT * FROM History")
             self.history = self.cur.fetchall()
             
-            # Create header
             header_frame = ttk.Frame(scrollable_frame)
             header_frame.pack(fill="x", padx=10, pady=(10, 20))
             ttk.Label(header_frame, text="Code Optimization History", style="Header.TLabel").pack(side="left")
@@ -238,17 +272,14 @@ class AICodeOptimizer:
                     ttk.Separator(scrollable_frame, orient="horizontal").pack(fill="x", padx=10, pady=5)
     
     def review_history_item(self, item):
-        # Switch to optimize tab
         self.tabControl.select(0)
         
-        # Load the code
         self.code_editor.delete("1.0", tk.END)
         self.code_editor.insert("1.0", item[1])
         
         self.code_editor1.delete("1.0", tk.END)
         self.code_editor1.insert("1.0", item[2])
         
-        # Update status
         self.detectorLabel.config(text="History item loaded")
         
     def deleteQuery(self, primaryKey):
@@ -268,6 +299,7 @@ class AICodeOptimizer:
                 mapped_language = LANGUAGE_MAP.get(detected_language, "text")
                 self.language = mapped_language
                 self.languageLabel.config(text="Language: " + detected_language)
+                self.code_editor.language = self.language
             except:
                 pass
         
